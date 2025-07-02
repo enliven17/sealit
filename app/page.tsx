@@ -1,12 +1,43 @@
 import Image from "next/image";
 import styles from "./page.module.css";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
+import { PostCreateModal } from "@/components/PostCreateModal";
+import { PostFeed } from "@/components/PostFeed";
+import React, { useState } from "react";
+
+// Post tipini PostFeed ile uyumlu tanımlıyoruz
+interface Post {
+  id: number;
+  content: string;
+  token: string;
+  amount: number;
+  locked: boolean;
+}
 
 export default function Home() {
+  const [showModal, setShowModal] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const handleCreate = (post: { content: string; token: string; amount: number }) => {
+    setPosts(prev => [
+      { id: Date.now(), ...post, locked: true },
+      ...prev
+    ]);
+  };
+  const handleUnlock = (id: number) => {
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, locked: false } : p));
+  };
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
         <WalletConnectButton />
+        <button style={{margin:'24px 0', padding:'12px 28px', borderRadius:8, background:'#1e88e5', color:'#fff', border:'none', fontSize:'1.1rem', cursor:'pointer'}} onClick={()=>setShowModal(true)}>
+          Gönderi Oluştur
+        </button>
+        {showModal && (
+          <PostCreateModal onClose={()=>setShowModal(false)} onCreate={handleCreate} />
+        )}
+        <PostFeed posts={posts} onUnlock={handleUnlock} />
         <Image
           className={styles.logo}
           src="/next.svg"
