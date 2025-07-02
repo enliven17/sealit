@@ -32,6 +32,7 @@ const Desc = styled.div`
 
 export const UserPanel: React.FC = () => {
   const address = useSelector((state: RootState) => state.wallet.address);
+  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
   return (
     <Box>
       <Avatar src="https://randomuser.me/api/portraits/men/32.jpg" alt="avatar" />
@@ -49,8 +50,14 @@ export const UserPanel: React.FC = () => {
             fontSize: '0.97rem',
             fontFamily: 'monospace',
             textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
           }}>
-            <span style={{color:'#b3b8c5', fontSize:'0.93rem'}}>Wallet:</span><br/>{address}
+            <span style={{color:'#b3b8c5', fontSize:'0.93rem'}}>Wallet:</span>
+            <span title={address}>{shortAddress}</span>
+            <button style={{background:'none',border:'none',color:'#36B04A',cursor:'pointer',fontSize:'1.1em'}} onClick={()=>navigator.clipboard.writeText(address)} title="Copy address">⧉</button>
           </div>
         )}
       </Info>
