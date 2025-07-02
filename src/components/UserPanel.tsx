@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import styled from "styled-components";
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/index';
 
 const Box = styled.div`
   background: #181c24;
@@ -28,12 +30,30 @@ const Desc = styled.div`
   font-size: 0.98rem;
 `;
 
-export const UserPanel: React.FC = () => (
-  <Box>
-    <Avatar src="https://randomuser.me/api/portraits/men/32.jpg" alt="User avatar" />
-    <Info>
-      <Name>Benjamin Thompson</Name>
-      <Desc>Web3 builder. SocialFi & DeFi enthusiast.</Desc>
-    </Info>
-  </Box>
-); 
+export const UserPanel: React.FC = () => {
+  const address = useSelector((state: RootState) => state.wallet.address);
+  return (
+    <Box>
+      <Avatar src="https://randomuser.me/api/portraits/men/32.jpg" alt="avatar" />
+      <Info>
+        <Name>Benjamin Thompson</Name>
+        <Desc>Web3 builder. SocialFi & DeFi enthusiast.</Desc>
+        {address && (
+          <div style={{
+            background: '#23272f',
+            color: '#36B04A',
+            borderRadius: 8,
+            padding: '8px 12px',
+            margin: '16px 0',
+            wordBreak: 'break-all',
+            fontSize: '0.97rem',
+            fontFamily: 'monospace',
+            textAlign: 'center',
+          }}>
+            <span style={{color:'#b3b8c5', fontSize:'0.93rem'}}>Wallet:</span><br/>{address}
+          </div>
+        )}
+      </Info>
+    </Box>
+  );
+}; 

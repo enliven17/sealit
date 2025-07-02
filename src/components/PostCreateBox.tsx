@@ -1,6 +1,9 @@
 "use client";
 import React, { useRef, useState } from "react";
 import styled from "styled-components";
+import { AQUA, YUSDC, BLEND_POOL_ADDRESS } from '@/constants/assets';
+import Server, { Keypair, Asset, TransactionBuilder, Networks, Operation, BASE_FEE } from 'stellar-sdk';
+import { StellarWalletsKit, WalletNetwork, allowAllModules } from '@creit.tech/stellar-wallets-kit';
 
 const Box = styled.div`
   background: #181c24;
@@ -106,6 +109,13 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
   const [token, setToken] = useState("AQUA");
   const [amount, setAmount] = useState(10);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const kit = new StellarWalletsKit({
+    network: WalletNetwork.TESTNET,
+    modules: allowAllModules(),
+  });
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,14 +126,56 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
     }
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
+    setError(null);
     if ((content.trim() || imageUrl) && amount > 0) {
-      onCreate({ content, imageUrl, token, amount });
-      setContent("");
-      setImageUrl(undefined);
-      setAmount(10);
-      setToken("AQUA");
-      if (fileRef.current) fileRef.current.value = "";
+      setLoading(true);
+      try {
+        // Wallets Kit ile transfer
+        const server = new Server('https://horizon-testnet.stellar.org');
+        const result = await kit.getAddress();
+        const pubkey = result.address;
+        const account = await server.loadAccount(pubkey);
+        const asset = token === 'AQUA' ? new Asset(AQUA.code, AQUA.issuer) : new Asset(YUSDC.code, YUSDC.issuer);
+        const tx = new TransactionBuilder(account, {
+          fee: BASE_FEE,
+          networkPassphrase: Networks.TESTNET,
+        })
+          .addOperation(Operation.payment({
+            destination: BLEND_POOL_ADDRESS,
+            asset,
+            amount: amount.toString(),
+          }))
+          .setTimeout(60)
+          .build();
+        let signed;
+        try {
+          signed = await kit.signTransaction(tx.toXDR(), {
+            address: pubkey,
+            networkPassphrase: Networks.TESTNET,
+          });
+        } catch (e) {
+          setError('Transaction signing failed: ' + ((e as any)?.message || 'Unknown error'));
+          setLoading(false);
+          return;
+        }
+        const signedXDR = typeof signed === 'string' ? signed : signed.signedTxXdr;
+        const res = await server.submitTransaction(TransactionBuilder.fromXDR(signedXDR, 'Test SDF Network ; September 2015'));
+        if (res.successful) {
+          onCreate({ content, imageUrl, token, amount });
+          setContent("");
+          setImageUrl(undefined);
+          setAmount(10);
+          setToken("AQUA");
+          if (fileRef.current) fileRef.current.value = "";
+        } else {
+          setError('Token transfer failed.');
+        }
+      } catch (e: any) {
+        setError('Token transfer failed: ' + (e?.message || 'Unknown error'));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -162,10 +214,11 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
             />
           </Attach>
         </div>
-        <PostBtn onClick={handlePost} disabled={(!content.trim() && !imageUrl) || amount < 1}>
-          Lock with Token
+        <PostBtn onClick={handlePost} disabled={(!content.trim() && !imageUrl) || amount < 1 || loading}>
+          {loading ? 'Locking...' : 'Lock with Token'}
         </PostBtn>
       </Actions>
+      {error && <div style={{color:'#ff5252',marginTop:8}}>{error}</div>}
     </Box>
   );
 }; 
