@@ -3,9 +3,17 @@
 import React from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { LockedParticles } from "@/components/LockedParticles";
+import { Confetti } from "@/components/Confetti";
 import { StellarWalletsKit, WalletNetwork, allowAllModules } from '@creit.tech/stellar-wallets-kit';
-import Server, { Asset, TransactionBuilder, Networks, Operation, BASE_FEE } from 'stellar-sdk';
-import { AQUA, YUSDC, BLEND_POOL_ADDRESS } from '@/constants/assets';
+import { 
+  Server, 
+  Asset, 
+  TransactionBuilder, 
+  Networks, 
+  Operation, 
+  BASE_FEE 
+} from 'stellar-sdk';
+import { BLND, BLEND_POOL_ADDRESS, PLATFORM_ADDRESS, calculateUnlockFee } from '@/constants/assets';
 
 type Post = {
   id: number;
@@ -104,45 +112,7 @@ const Img = styled.img`
   border: 1px solid #23272f;
 `;
 
-const DEMO_POSTS: Post[] = [
-  {
-    id: 1,
-    content: "Launching my new NFT collection on Stellar! 🚀",
-    token: "AQUA",
-    amount: 20,
-    locked: true,
-    user: {
-      name: "Emma Hamilton",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      time: "2 hours ago"
-    },
-    imageUrl: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80"
-  },
-  {
-    id: 2,
-    content: "Just added liquidity to the AQUA/yUSDC Blend pool. Loving the rewards!",
-    token: "yUSDC",
-    amount: 15,
-    locked: false,
-    user: {
-      name: "Lucas Reed",
-      avatar: "https://randomuser.me/api/portraits/men/65.jpg",
-      time: "1 hour ago"
-    }
-  },
-  {
-    id: 3,
-    content: "SocialFi is the future. Token-gated posts are a game changer!",
-    token: "AQUA",
-    amount: 10,
-    locked: true,
-    user: {
-      name: "Sophia Lee",
-      avatar: "https://randomuser.me/api/portraits/women/68.jpg",
-      time: "just now"
-    }
-  }
-];
+
 
 const kit = new StellarWalletsKit({
   network: WalletNetwork.TESTNET,
@@ -153,85 +123,110 @@ export const PostFeed: React.FC<Props> = ({ posts, onUnlock }) => {
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
   const [errorId, setErrorId] = React.useState<number | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-  const showPosts = posts.length > 0 ? posts : DEMO_POSTS;
+  const [showConfetti, setShowConfetti] = React.useState(false);
+  const showPosts = posts;
   const handleUnlockClick = async (post: Post) => {
     setErrorId(null);
     setErrorMsg(null);
     setLoadingId(post.id);
     try {
-      // Wallets Kit ile transfer
+      // Wallets Kit ile unlock işlemi
       const server = new Server('https://horizon-testnet.stellar.org');
       const result = await kit.getAddress();
       const pubkey = result.address;
       const account = await server.loadAccount(pubkey);
-      const asset = post.token === 'AQUA' ? new Asset(AQUA.code, AQUA.issuer) : new Asset(YUSDC.code, YUSDC.issuer);
+      
+      // Unlock ücretini hesapla
+      const unlockFee = calculateUnlockFee(post.amount);
+      
+      // Önce kullanıcının BLND token'ına sahip olup olmadığını kontrol et
+      const blndAsset = new Asset(BLND.code, BLND.issuer);
+      const hasBlnd = account.balances.some(balance => 
+        balance.asset_type === 'credit_alphanum4' && 
+        balance.asset_code === BLND.code && 
+        balance.asset_issuer === BLND.issuer &&
+        parseFloat(balance.balance) >= unlockFee
+      );
+      
+      if (!hasBlnd) {
+        setErrorId(post.id);
+        setErrorMsg(`You need at least ${unlockFee} BLND to unlock this post (${post.amount} XLM × 0.3 + 20% security fee)`);
+        setLoadingId(null);
+        return;
+      }
+      
+      // BLND token'ını platform hesabına gönder
       const tx = new TransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase: Networks.TESTNET,
       })
         .addOperation(Operation.payment({
-          destination: BLEND_POOL_ADDRESS,
-          asset,
-          amount: post.amount.toString(),
+          destination: PLATFORM_ADDRESS,
+          asset: blndAsset,
+          amount: unlockFee.toString(),
         }))
-        .setTimeout(60)
+        .setTimeout(30)
         .build();
-      let signed;
-      try {
-        signed = await kit.signTransaction(tx.toXDR(), {
-          address: pubkey,
-          networkPassphrase: Networks.TESTNET,
-        });
-      } catch (e) {
-        setErrorId(post.id);
-        setErrorMsg('Transaction signing failed: ' + ((e as any)?.message || 'Unknown error'));
-        setLoadingId(null);
-        return;
-      }
-      const signedXDR = typeof signed === 'string' ? signed : signed.signedTxXdr;
-      const res = await server.submitTransaction(TransactionBuilder.fromXDR(signedXDR, 'Test SDF Network ; September 2015'));
-      if (res.successful) {
-        onUnlock(post.id);
+      
+      const signed = await kit.signTransaction(tx.toXDR(), { networkPassphrase: Networks.TESTNET });
+      if (typeof signed === 'string') {
+        try {
+          await server.submitTransaction(TransactionBuilder.fromXDR(signed, Networks.TESTNET));
+          onUnlock(post.id);
+          setShowConfetti(true);
+        } catch (err) {
+          setErrorId(post.id);
+          setErrorMsg('Transaction failed');
+        }
       } else {
-        setErrorId(post.id);
-        setErrorMsg('Token transfer failed.');
+        try {
+          await server.submitTransaction(TransactionBuilder.fromXDR(signed.signedTxXdr, Networks.TESTNET));
+          onUnlock(post.id);
+          setShowConfetti(true);
+        } catch (err) {
+          setErrorId(post.id);
+          setErrorMsg('Transaction failed');
+        }
       }
     } catch (e: any) {
       setErrorId(post.id);
-      setErrorMsg('Token transfer failed: ' + (e?.message || 'Unknown error'));
+      setErrorMsg('Unlock failed: ' + (e?.message || 'Unknown error'));
     } finally {
       setLoadingId(null);
     }
   };
   return (
-    <Feed>
-      {showPosts.map(post => (
-        <PostCard key={post.id} $locked={!!post.locked}>
-          {post.locked && <LockedParticles />}
-          <UserRow>
-            <Avatar src={post.user?.avatar || "https://randomuser.me/api/portraits/men/32.jpg"} alt="avatar" />
-            <div>
-              <Username>{post.user?.name || "Demo User"}</Username>
-              <Time>{post.user?.time || "now"}</Time>
+    <>
+      <Confetti isActive={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <Feed>
+        {showPosts.map(post => (
+          <PostCard key={post.id} $locked={!!post.locked}>
+            {post.locked && <LockedParticles />}
+            <UserRow>
+              <Avatar src={post.user?.avatar || "https://randomuser.me/api/portraits/men/32.jpg"} alt="avatar" />
+              <div>
+                <Username>{post.user?.name || "Demo User"}</Username>
+                <Time>{post.user?.time || "now"}</Time>
+              </div>
+            </UserRow>
+            <div style={{fontWeight:'bold', marginBottom:8}}>
+              Locked: {post.amount} XLM
             </div>
-          </UserRow>
-          <div style={{fontWeight:'bold', marginBottom:8}}>
-            Locked: {post.amount} {post.token}
-          </div>
-          <div>{post.content}</div>
-          {post.imageUrl && <Img src={post.imageUrl} alt="post image" />}
-          {post.locked && (
-            <>
-              <UnlockButton onClick={() => handleUnlockClick(post)} disabled={loadingId === post.id}>
-                {loadingId === post.id ? 'Unlocking...' : `Unlock for ${post.amount} ${post.token}`}
+            <div>{post.content}</div>
+            {post.imageUrl && <Img src={post.imageUrl} alt="post image" />}
+            {post.locked && (
+              <>
+                              <UnlockButton onClick={() => handleUnlockClick(post)} disabled={loadingId === post.id}>
+                {loadingId === post.id ? 'Unlocking...' : `Unlock for ${calculateUnlockFee(post.amount)} BLND`}
               </UnlockButton>
-              {errorId === post.id && errorMsg && (
-                <div style={{color:'#ff5252',marginTop:8}}>{errorMsg}</div>
-              )}
-            </>
-          )}
-        </PostCard>
-      ))}
-    </Feed>
+                {errorId === post.id && errorMsg && (
+                  <div style={{color:'#ff5252',marginTop:8}}>{errorMsg}</div>
+                )}
+              </>
+            )}
+          </PostCard>
+        ))}
+      </Feed>
+    </>
   );
 }; 

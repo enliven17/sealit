@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -22,7 +22,8 @@
     "react-dom": "^19.0.0",
     "react-redux": "^9.2.0",
     "react-tsparticles": "^2.12.2",
-    "stellar-sdk": "^13.3.0",
+    "soroban-client": "^1.0.1",
+    "stellar-sdk": "^8.2.3",
     "styled-components": "^6.1.19",
     "tsparticles": "^3.8.1"
   },
