@@ -1,8 +1,8 @@
 "use client";
 import React, { useRef, useState } from "react";
 import styled from "styled-components";
-import { AQUA, YUSDC, BLEND_POOL_ADDRESS } from '@/constants/assets';
-import Server, { Keypair, Asset, TransactionBuilder, Networks, Operation, BASE_FEE } from 'stellar-sdk';
+import { AQUA, YUSDC, BLEND_POOL_ADDRESS, BLEND_POOL_CONTRACT_ID, BLEND_DEPOSIT_FUNCTION, AQUA_CONTRACT_ID, YUSDC_CONTRACT_ID } from '@/constants/assets';
+import Server, { Keypair, Asset, TransactionBuilder, Networks, Operation, BASE_FEE, nativeToScVal } from 'stellar-sdk';
 import { StellarWalletsKit, WalletNetwork, allowAllModules } from '@creit.tech/stellar-wallets-kit';
 
 const Box = styled.div`
@@ -137,16 +137,24 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
         const pubkey = result.address;
         const account = await server.loadAccount(pubkey);
         const asset = token === 'AQUA' ? new Asset(AQUA.code, AQUA.issuer) : new Asset(YUSDC.code, YUSDC.issuer);
+        // Soroban contract call for Blend lock
+        // TODO: Update args as required by Blend contract and use real contract addresses
+        const assetContractId = token === 'AQUA' ? AQUA_CONTRACT_ID : YUSDC_CONTRACT_ID;
         const tx = new TransactionBuilder(account, {
           fee: BASE_FEE,
           networkPassphrase: Networks.TESTNET,
         })
-          .addOperation(Operation.payment({
-            destination: BLEND_POOL_ADDRESS,
-            asset,
-            amount: amount.toString(),
+          .addOperation(Operation.invokeContractFunction({
+            contract: BLEND_POOL_CONTRACT_ID,
+            function: BLEND_DEPOSIT_FUNCTION,
+            args: [
+              nativeToScVal(BLEND_POOL_CONTRACT_ID), // pool_id or contract id
+              nativeToScVal(assetContractId),        // asset contract id
+              nativeToScVal(amount),                 // amount (should be 7 decimals)
+              nativeToScVal(pubkey),                 // user address
+            ],
           }))
-          .setTimeout(60)
+          .setTimeout(180)
           .build();
         let signed;
         try {

@@ -3,6 +3,9 @@
 import React from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { LockedParticles } from "@/components/LockedParticles";
+import { StellarWalletsKit, WalletNetwork, allowAllModules } from '@creit.tech/stellar-wallets-kit';
+import Server, { Asset, TransactionBuilder, Networks, Operation, BASE_FEE } from 'stellar-sdk';
+import { AQUA, YUSDC, BLEND_POOL_ADDRESS } from '@/constants/assets';
 
 type Post = {
   id: number;
@@ -141,11 +144,64 @@ const DEMO_POSTS: Post[] = [
   }
 ];
 
+const kit = new StellarWalletsKit({
+  network: WalletNetwork.TESTNET,
+  modules: allowAllModules(),
+});
+
 export const PostFeed: React.FC<Props> = ({ posts, onUnlock }) => {
+  const [loadingId, setLoadingId] = React.useState<number | null>(null);
+  const [errorId, setErrorId] = React.useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const showPosts = posts.length > 0 ? posts : DEMO_POSTS;
-  const handleUnlockClick = (post: Post) => {
-    alert(`To unlock this post, you need to lock ${post.amount} ${post.token}.`);
-    onUnlock(post.id);
+  const handleUnlockClick = async (post: Post) => {
+    setErrorId(null);
+    setErrorMsg(null);
+    setLoadingId(post.id);
+    try {
+      // Wallets Kit ile transfer
+      const server = new Server('https://horizon-testnet.stellar.org');
+      const result = await kit.getAddress();
+      const pubkey = result.address;
+      const account = await server.loadAccount(pubkey);
+      const asset = post.token === 'AQUA' ? new Asset(AQUA.code, AQUA.issuer) : new Asset(YUSDC.code, YUSDC.issuer);
+      const tx = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase: Networks.TESTNET,
+      })
+        .addOperation(Operation.payment({
+          destination: BLEND_POOL_ADDRESS,
+          asset,
+          amount: post.amount.toString(),
+        }))
+        .setTimeout(60)
+        .build();
+      let signed;
+      try {
+        signed = await kit.signTransaction(tx.toXDR(), {
+          address: pubkey,
+          networkPassphrase: Networks.TESTNET,
+        });
+      } catch (e) {
+        setErrorId(post.id);
+        setErrorMsg('Transaction signing failed: ' + ((e as any)?.message || 'Unknown error'));
+        setLoadingId(null);
+        return;
+      }
+      const signedXDR = typeof signed === 'string' ? signed : signed.signedTxXdr;
+      const res = await server.submitTransaction(TransactionBuilder.fromXDR(signedXDR, 'Test SDF Network ; September 2015'));
+      if (res.successful) {
+        onUnlock(post.id);
+      } else {
+        setErrorId(post.id);
+        setErrorMsg('Token transfer failed.');
+      }
+    } catch (e: any) {
+      setErrorId(post.id);
+      setErrorMsg('Token transfer failed: ' + (e?.message || 'Unknown error'));
+    } finally {
+      setLoadingId(null);
+    }
   };
   return (
     <Feed>
@@ -165,9 +221,14 @@ export const PostFeed: React.FC<Props> = ({ posts, onUnlock }) => {
           <div>{post.content}</div>
           {post.imageUrl && <Img src={post.imageUrl} alt="post image" />}
           {post.locked && (
-            <UnlockButton onClick={() => handleUnlockClick(post)}>
-              Unlock for {post.amount} {post.token}
-            </UnlockButton>
+            <>
+              <UnlockButton onClick={() => handleUnlockClick(post)} disabled={loadingId === post.id}>
+                {loadingId === post.id ? 'Unlocking...' : `Unlock for ${post.amount} ${post.token}`}
+              </UnlockButton>
+              {errorId === post.id && errorMsg && (
+                <div style={{color:'#ff5252',marginTop:8}}>{errorMsg}</div>
+              )}
+            </>
           )}
         </PostCard>
       ))}
