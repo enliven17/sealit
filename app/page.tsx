@@ -1,9 +1,14 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
 import { PostCreateModal } from "@/components/PostCreateModal";
 import { PostFeed } from "@/components/PostFeed";
+import { MainLayout } from "@/components/MainLayout";
+import { SidebarTrends } from "@/components/SidebarTrends";
+import { DiscoverConnections } from "@/components/DiscoverConnections";
+import { UserPanel } from "@/components/UserPanel";
+import { Navbar } from "@/components/Navbar";
 import React, { useState } from "react";
+import { PostCreateBox } from "@/components/PostCreateBox";
 
 // Post tipini PostFeed ile uyumlu tanımlıyoruz
 interface Post {
@@ -12,14 +17,28 @@ interface Post {
   token: string;
   amount: number;
   locked: boolean;
+  imageUrl?: string;
+  user?: {
+    name: string;
+    avatar: string;
+    time: string;
+  };
 }
 
 export default function Home() {
-  const [showModal, setShowModal] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
-  const handleCreate = (post: { content: string; token: string; amount: number }) => {
+  const handleCreate = (post: { content: string; imageUrl?: string; token: string; amount: number }) => {
     setPosts(prev => [
-      { id: Date.now(), ...post, locked: true },
+      {
+        id: Date.now(),
+        ...post,
+        locked: true,
+        user: {
+          name: "Benjamin Thompson",
+          avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+          time: "now"
+        }
+      },
       ...prev
     ]);
   };
@@ -27,102 +46,25 @@ export default function Home() {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, locked: false } : p));
   };
 
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <WalletConnectButton />
-        <button style={{margin:'24px 0', padding:'12px 28px', borderRadius:8, background:'#1e88e5', color:'#fff', border:'none', fontSize:'1.1rem', cursor:'pointer'}} onClick={()=>setShowModal(true)}>
-          Gönderi Oluştur
-        </button>
-        {showModal && (
-          <PostCreateModal onClose={()=>setShowModal(false)} onCreate={handleCreate} />
-        )}
-        <PostFeed posts={posts} onUnlock={handleUnlock} />
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // Orta sütun içeriği
+  const center = (
+    <>
+      <PostCreateBox onCreate={handleCreate} />
+      <PostFeed posts={posts} onUnlock={handleUnlock} />
+    </>
+  );
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  return (
+    <>
+      <Navbar />
+      <MainLayout
+        left={<SidebarTrends />}
+        center={center}
+        right={<>
+          <UserPanel />
+          <DiscoverConnections />
+        </>}
+      />
+    </>
   );
 }

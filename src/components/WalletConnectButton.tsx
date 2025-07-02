@@ -1,8 +1,10 @@
+"use client";
+
 import React, { useState } from 'react';
 import styled from 'styled-components';
 
 const Button = styled.button`
-  background: #1e88e5;
+  background: #36B04A;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -11,7 +13,7 @@ const Button = styled.button`
   cursor: pointer;
   transition: background 0.2s;
   &:hover {
-    background: #1565c0;
+    background: #258034;
   }
 `;
 
