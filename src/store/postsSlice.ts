@@ -40,7 +40,7 @@ const initialState: PostsState = {
       amount: 15,
       locked: false,
       user: {
-        name: "Lucas Reed",
+        name: "Atlas Doruk Aykar",
         avatar: "https://randomuser.me/api/portraits/men/65.jpg",
         time: "1 hour ago"
       }

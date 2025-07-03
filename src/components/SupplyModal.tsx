@@ -61,16 +61,18 @@ const SupplyModal: React.FC<Props> = ({ onClose, onContinue, loading }) => {
     <Overlay>
       <Modal>
         <Close onClick={onClose}>&times;</Close>
-        <h3>Supply İşlemini Tamamla</h3>
-        <p>Lütfen yeni sekmede açılan Blend Testnet sitesinde XLM supply işlemini tamamlayın.<br/>İşlem bittikten sonra transaction kodunu aşağıya yapıştırıp "Devam" butonuna basın.</p>
+        <h2 style={{color:'#fff',marginBottom:12}}>Supply Transaction Verification</h2>
+        <div style={{color:'#b3b8c5',marginBottom:18,fontSize:'1.05rem'}}>
+          Please complete your XLM supply on Blend. Then paste your transaction hash below to verify and continue.
+        </div>
         <Input
-          placeholder="Transaction hash (kodunu) girin"
+          type="text"
+          placeholder="Enter transaction hash..."
           value={txHash}
           onChange={e => setTxHash(e.target.value)}
-          disabled={loading}
         />
         <Button onClick={() => onContinue(txHash)} disabled={loading || !txHash}>
-          {loading ? 'Kontrol ediliyor...' : 'Devam'}
+          {loading ? 'Checking...' : 'Continue'}
         </Button>
       </Modal>
     </Overlay>

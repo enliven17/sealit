@@ -47,20 +47,21 @@ export const UserPanel: React.FC = () => {
               background: '#23272f',
               color: '#36B04A',
               borderRadius: 8,
-              padding: '8px 12px',
-              margin: '16px 0',
+              padding: '4px 8px',
+              margin: '12px 0 0 0',
               wordBreak: 'break-all',
-              fontSize: '0.97rem',
-              fontFamily: 'monospace',
+              fontSize: '0.89rem',
+              fontFamily: 'JetBrains Mono, monospace',
               textAlign: 'center',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
+              gap: 4,
+              minWidth: 0,
+              maxWidth: 180,
             }}>
-              <span style={{color:'#b3b8c5', fontSize:'0.93rem'}}>Wallet:</span>
-              <span title={address}>{shortAddress}</span>
-              <button style={{background:'none',border:'none',color:'#36B04A',cursor:'pointer',fontSize:'1.1em'}} onClick={()=>navigator.clipboard.writeText(address)} title="Copy address">⧉</button>
+              <span title={address} style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#36B04A',fontWeight:600}}>{shortAddress}</span>
+              <button style={{background:'none',border:'none',color:'#36B04A',cursor:'pointer',fontSize:'1.1em',padding:0,marginLeft:2}} onClick={()=>navigator.clipboard.writeText(address)} title="Copy address">⧉</button>
             </div>
           )}
         </Info>

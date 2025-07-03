@@ -45,7 +45,7 @@ const Search = styled.input`
   padding: 12px 24px 12px 44px;
   border-radius: 24px;
   border: none;
-  background: #23272f;
+  background: #262a32;
   color: #fff;
   font-size: 1.08rem;
   outline: none;
@@ -65,6 +65,7 @@ const SearchIconStyled = styled.div`
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
+  z-index: 2;
 `;
 const Right = styled.div`
   display: flex;

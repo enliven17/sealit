@@ -38,9 +38,9 @@ export const DiscoverConnections: React.FC = () => (
   <Box>
     <Title>Discover New Connections</Title>
     <User><Name>Elon Musk</Name><Follow>Follow</Follow></User>
-    <User><Name>Emily Thorne</Name><Follow>Follow</Follow></User>
-    <User><Name>Olivia Pierce</Name><Follow>Follow</Follow></User>
-    <User><Name>Ethan Clarke</Name><Follow>Follow</Follow></User>
-    <User><Name>Alex Bennett</Name><Follow>Follow</Follow></User>
+    <User><Name>Candace Kelly</Name><Follow>Follow</Follow></User>
+    <User><Name>David Mazières</Name><Follow>Follow</Follow></User>
+    <User><Name>BuildOnStellar</Name><Follow>Follow</Follow></User>
+    <User><Name>odtublockchain</Name><Follow>Follow</Follow></User>
   </Box>
 ); 

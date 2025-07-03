@@ -160,7 +160,7 @@ const XlmLabel = styled.span`
 `;
 
 type Props = {
-  onCreate: (post: { content: string; imageUrl?: string; token: string; amount: number }) => void;
+  onCreate: (post: { content: string; imageUrl?: string; token: string; amount: number; user: { name: string; avatar: string; time: string } }) => void;
 };
 
 const TYPEWRITER_TEXT = "What's happening?";
@@ -231,13 +231,23 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
       const pubkey = result.address;
       const supplied = await verifySupplyTx(txHash, pubkey, amount, BLEND_POOL_ADDRESS);
       if (supplied) {
-        onCreate({ content, imageUrl, token: 'XLM', amount });
+        onCreate({
+          content,
+          imageUrl,
+          token: 'XLM',
+          amount,
+          user: {
+            name: 'enliven',
+            avatar: avatarUrl,
+            time: 'now',
+          },
+        });
         setContent("");
         setImageUrl("");
         setAmount(0);
         setShowSupplyModal(false);
       } else {
-        setError('Supply işlemi doğrulanamadı. Lütfen transaction hash, miktar ve cüzdanı kontrol edin.');
+        setError('Supply transaction could not be verified. Please check the transaction hash, amount, and wallet address.');
       }
     } catch (e: any) {
       setError('Supply kontrolü başarısız: ' + (e?.message || 'Unknown error'));
@@ -271,12 +281,18 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
               />
               <XlmLabel>XLM</XlmLabel>
             </AmountRow>
-            <AttachButton onClick={handleAttachClick}>
+            <AttachButton onClick={handleAttachClick} type="button">
               <span role="img" aria-label="attach" style={{marginRight: 6}}>📎</span>Attach
             </AttachButton>
           </div>
+          <HiddenInput
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImage}
+          />
           <LockButton onClick={handleLockClick} disabled={loading || !content || amount <= 0}>
-            {loading ? 'Kontrol ediliyor...' : `Lock with XLM`}
+            {loading ? 'Checking...' : `Lock with XLM`}
           </LockButton>
         </Actions>
         {showSupplyModal && (

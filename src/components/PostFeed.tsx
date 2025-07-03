@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { LockedParticles } from "@/components/LockedParticles";
 import { Confetti } from "@/components/Confetti";
@@ -14,6 +14,7 @@ import {
   BASE_FEE 
 } from 'stellar-sdk';
 import { BLND, BLEND_POOL_ADDRESS, PLATFORM_ADDRESS, calculateUnlockFee } from '@/constants/assets';
+import demoPostImg from '@/assets/posts/demopost.png';
 
 type Post = {
   id: number;
@@ -27,6 +28,7 @@ type Post = {
     avatar: string;
     time: string;
   };
+  likes?: number;
 };
 
 type Props = {
@@ -40,6 +42,13 @@ const glow = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(54,176,74,0.18); border-color: #23272f; }
 `;
 
+const heartPop = keyframes`
+  0% { transform: scale(1); }
+  30% { transform: scale(1.4); }
+  60% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+`;
+
 const Feed = styled.div`
   margin-top: 32px;
   display: flex;
@@ -50,13 +59,13 @@ const Feed = styled.div`
 const PostCard = styled.div<{ $locked: boolean }>`
   background: #181c24;
   border-radius: 18px;
-  padding: 32px 32px 28px 32px;
+  padding: 32px 32px 90px 32px;
   color: #fff;
   position: relative;
   box-shadow: 0 4px 24px rgba(0,0,0,0.13);
   border: 1.5px solid #23272f;
   overflow: hidden;
-  min-height: 180px;
+  min-height: 240px;
   transition: border-color 0.2s, box-shadow 0.2s;
   ${({ $locked }) => $locked && css`
     filter: grayscale(0.7) blur(2px);
@@ -68,7 +77,7 @@ const PostCard = styled.div<{ $locked: boolean }>`
     box-shadow: 0 0 16px 2px rgba(54,176,74,0.32);
   }
 `;
-const UnlockButton = styled.button`
+const UnlockButton = styled.button<{ $locked?: boolean }>`
   display: block;
   width: 100%;
   margin: 24px auto 0 auto;
@@ -82,12 +91,19 @@ const UnlockButton = styled.button`
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   &:hover { background: #36B04A; color: #fff; }
+  ${({ $locked }) => $locked && `
+    filter: none !important;
+    z-index: 3;
+  `}
 `;
 const UserRow = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 18px;
+`;
+const PostMeta = styled.div`
+  margin-bottom: 22px;
 `;
 const Avatar = styled.img`
   width: 36px;
@@ -105,14 +121,47 @@ const Time = styled.div`
   font-size: 0.92rem;
 `;
 const Img = styled.img`
-  max-width: 320px;
-  max-height: 220px;
-  border-radius: 12px;
-  margin-top: 14px;
-  border: 1px solid #23272f;
+  display: block;
+  margin: 28px auto 0 auto;
+  width: 100%;
+  max-width: 720px;
+  max-height: 540px;
+  border-radius: 22px;
+  border: 2px solid #23272f;
+  object-fit: contain;
+  background: #181c24;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.16);
 `;
-
-
+const LikeRow = styled.div`
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  background: #23272f;
+  border-radius: 16px;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+`;
+const LikeButton = styled.button<{ animate?: boolean }>`
+  background: none;
+  border: none;
+  color: #ff5252;
+  font-size: 1.18rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.18s;
+  &:hover { color: #e53935; }
+  span.heart {
+    display: inline-block;
+    ${({ animate }) => animate && css`
+      animation: ${heartPop} 0.5s cubic-bezier(.36,1.01,.32,1) both;
+    `}
+  }
+`;
 
 const kit = new StellarWalletsKit({
   network: WalletNetwork.TESTNET,
@@ -124,6 +173,9 @@ export const PostFeed: React.FC<Props> = ({ posts, onUnlock }) => {
   const [errorId, setErrorId] = React.useState<number | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [showConfetti, setShowConfetti] = React.useState(false);
+  const [likes, setLikes] = useState<{[id:number]:number}>({});
+  const [liked, setLiked] = useState<{[id:number]:boolean}>({});
+  const [heartAnim, setHeartAnim] = useState<{[id:number]:boolean}>({});
   const showPosts = posts;
   const handleUnlockClick = async (post: Post) => {
     setErrorId(null);
@@ -199,33 +251,51 @@ export const PostFeed: React.FC<Props> = ({ posts, onUnlock }) => {
     <>
       <Confetti isActive={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Feed>
-        {showPosts.map(post => (
-          <PostCard key={post.id} $locked={!!post.locked}>
-            {post.locked && <LockedParticles />}
-            <UserRow>
-              <Avatar src={post.user?.avatar || "https://randomuser.me/api/portraits/men/32.jpg"} alt="avatar" />
-              <div>
-                <Username>{post.user?.name || "Demo User"}</Username>
-                <Time>{post.user?.time || "now"}</Time>
-              </div>
-            </UserRow>
-            <div style={{fontWeight:'bold', marginBottom:8}}>
-              Locked: {post.amount} XLM
-            </div>
-            <div>{post.content}</div>
-            {post.imageUrl && <Img src={post.imageUrl} alt="post image" />}
-            {post.locked && (
-              <>
-                              <UnlockButton onClick={() => handleUnlockClick(post)} disabled={loadingId === post.id}>
-                {loadingId === post.id ? 'Unlocking...' : `Unlock for ${calculateUnlockFee(post.amount)} BLND`}
-              </UnlockButton>
-                {errorId === post.id && errorMsg && (
-                  <div style={{color:'#ff5252',marginTop:8}}>{errorMsg}</div>
-                )}
-              </>
-            )}
-          </PostCard>
-        ))}
+        {showPosts.map(post => {
+          const likeCount = likes[post.id] ?? (typeof post.likes === 'number' ? post.likes : 0);
+          return (
+            <PostCard key={post.id} $locked={!!post.locked}>
+              {post.locked && <LockedParticles />}
+              <UserRow>
+                <Avatar src={post.user?.avatar || "https://randomuser.me/api/portraits/men/32.jpg"} alt="avatar" />
+                <div>
+                  <Username>{post.user?.name || "Atlas Doruk Aykar"}</Username>
+                  <Time>{post.user?.time || "now"}</Time>
+                </div>
+              </UserRow>
+              <PostMeta>
+                <div style={{fontWeight:'bold'}}>
+                  Locked: {post.amount} XLM
+                </div>
+              </PostMeta>
+              <div>{post.content === 'Launching my new NFT collection on Stellar! 🚀' ? 'Check my XLM/USDT analysis! 🚀' : post.content}</div>
+              {((post.content === 'Launching my new NFT collection on Stellar! 🚀') || (post.content === 'Check my XLM/USDT analysis! 🚀')) ? (
+                <Img src={require('@/assets/posts/demopost.png').default?.src || require('@/assets/posts/demopost.png').src || require('@/assets/posts/demopost.png')} alt="post image" />
+              ) : post.imageUrl && <Img src={post.imageUrl} alt="post image" />}
+              <LikeRow>
+                <LikeButton onClick={() => {
+                  if (!liked[post.id]) {
+                    setLikes(l => ({...l, [post.id]: likeCount+1}));
+                    setLiked(l => ({...l, [post.id]: true}));
+                  }
+                }} aria-label="Like post">
+                  <span role="img" aria-label="like">❤️</span>
+                  <span style={{fontWeight:600,fontSize:'1.01rem',color:'#fff'}}>{likeCount}</span>
+                </LikeButton>
+              </LikeRow>
+              {post.locked && (
+                <>
+                  <UnlockButton $locked={!!post.locked} onClick={() => handleUnlockClick(post)} disabled={loadingId === post.id}>
+                    {loadingId === post.id ? 'Unlocking...' : `Unlock for ${calculateUnlockFee(post.amount)} BLND`}
+                  </UnlockButton>
+                  {errorId === post.id && errorMsg && (
+                    <div style={{color:'#ff5252',marginTop:8}}>{errorMsg}</div>
+                  )}
+                </>
+              )}
+            </PostCard>
+          );
+        })}
       </Feed>
     </>
   );
