@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
 
@@ -42,7 +42,7 @@ const Center = styled.div`
 const Search = styled.input`
   width: 100%;
   max-width: 480px;
-  padding: 12px 24px;
+  padding: 12px 24px 12px 44px;
   border-radius: 24px;
   border: none;
   background: #23272f;
@@ -52,6 +52,19 @@ const Search = styled.input`
   transition: box-shadow 0.2s;
   box-shadow: 0 1px 4px rgba(30,136,229,0.04);
   &::placeholder { color: #b3b8c5; }
+  position: relative;
+`;
+const SearchWrapper = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+`;
+const SearchIconStyled = styled.div`
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 `;
 const Right = styled.div`
   display: flex;
@@ -96,28 +109,60 @@ const IconBtn = styled.button`
   }
 `;
 
-export const Navbar: React.FC = () => (
-  <Bar>
-    <Left>
-      <Logo>🦭</Logo>
-      <Project>sealit</Project>
-    </Left>
-    <Center>
-      <Search placeholder="Search..." />
-    </Center>
-    <Right>
-      <IconBar>
-        <IconBtn aria-label="Bookmarks">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        </IconBtn>
-        <IconBtn aria-label="Notifications">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </IconBtn>
-        <IconBtn aria-label="Messages">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </IconBtn>
-      </IconBar>
-      <WalletConnectButton />
-    </Right>
-  </Bar>
-); 
+const SearchIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b3b8c5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+);
+
+export const Navbar: React.FC = () => {
+  const [typeText, setTypeText] = useState('');
+  const TYPEWRITER_TEXT = 'Build on Stellar';
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    let i = 0;
+    const type = () => {
+      if (i < TYPEWRITER_TEXT.length) {
+        setTypeText(TYPEWRITER_TEXT.slice(0, i + 1));
+        i++;
+        timeout = setTimeout(type, 90);
+      } else {
+        setTimeout(() => {
+          setTypeText('');
+          i = 0;
+          timeout = setTimeout(type, 90);
+        }, 1200);
+      }
+    };
+    type();
+    return () => clearTimeout(timeout);
+  }, []);
+  return (
+    <Bar>
+      <Left>
+        <Logo>🦭</Logo>
+        <Project>sealit</Project>
+      </Left>
+      <Center>
+        <SearchWrapper>
+          <SearchIconStyled>
+            <SearchIcon />
+          </SearchIconStyled>
+          <Search placeholder="Build on Stellar" />
+        </SearchWrapper>
+      </Center>
+      <Right>
+        <IconBar>
+          <IconBtn aria-label="Bookmarks">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </IconBtn>
+          <IconBtn aria-label="Notifications">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </IconBtn>
+          <IconBtn aria-label="Messages">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </IconBtn>
+        </IconBar>
+        <WalletConnectButton />
+      </Right>
+    </Bar>
+  );
+} 

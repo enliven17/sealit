@@ -3,6 +3,7 @@ import React from "react";
 import styled from "styled-components";
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/index';
+import avatarImg from '@/assets/profile/profile.jpeg';
 
 const Box = styled.div`
   background: #181c24;
@@ -32,35 +33,79 @@ const Desc = styled.div`
 
 export const UserPanel: React.FC = () => {
   const address = useSelector((state: RootState) => state.wallet.address);
+  const isWalletConnected = useSelector((state: RootState) => state.wallet.isConnected);
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
   return (
-    <Box>
-      <Avatar src="https://randomuser.me/api/portraits/men/32.jpg" alt="avatar" />
-      <Info>
-        <Name>Benjamin Thompson</Name>
-        <Desc>Web3 builder. SocialFi & DeFi enthusiast.</Desc>
-        {address && (
-          <div style={{
-            background: '#23272f',
-            color: '#36B04A',
-            borderRadius: 8,
-            padding: '8px 12px',
-            margin: '16px 0',
-            wordBreak: 'break-all',
-            fontSize: '0.97rem',
-            fontFamily: 'monospace',
-            textAlign: 'center',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
+    <div style={{position:'relative'}}>
+      <Box style={!isWalletConnected ? { filter: 'blur(2px)', pointerEvents: 'none' } : {}}>
+        <Avatar src={typeof avatarImg === 'string' ? avatarImg : avatarImg.src} alt="avatar" />
+        <Info>
+          <Name>enliven</Name>
+          <Desc>Web3 builder. SocialFi & DeFi enthusiast.</Desc>
+          {address && (
+            <div style={{
+              background: '#23272f',
+              color: '#36B04A',
+              borderRadius: 8,
+              padding: '8px 12px',
+              margin: '16px 0',
+              wordBreak: 'break-all',
+              fontSize: '0.97rem',
+              fontFamily: 'monospace',
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}>
+              <span style={{color:'#b3b8c5', fontSize:'0.93rem'}}>Wallet:</span>
+              <span title={address}>{shortAddress}</span>
+              <button style={{background:'none',border:'none',color:'#36B04A',cursor:'pointer',fontSize:'1.1em'}} onClick={()=>navigator.clipboard.writeText(address)} title="Copy address">⧉</button>
+            </div>
+          )}
+        </Info>
+      </Box>
+      {!isWalletConnected && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
+          background: 'linear-gradient(120deg, rgba(54,176,74,0.18) 0%, rgba(24,28,36,0.7) 60%, rgba(54,176,74,0.18) 100%)',
+          pointerEvents: 'auto',
+          animation: 'gradientMove 3s ease-in-out infinite',
+          backgroundSize: '200% 200%',
+          borderRadius: 16,
+        }}>
+          <style>{`
+            @keyframes gradientMove {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
+          `}</style>
+          <span style={{
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: 16,
+            textShadow: '0 2px 8px #000',
+            letterSpacing: 0.5,
+            background: 'linear-gradient(90deg, #36B04A, #b3ffb3, #36B04A)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            animation: 'gradientMove 2.5s linear infinite',
+            backgroundSize: '200% 200%',
           }}>
-            <span style={{color:'#b3b8c5', fontSize:'0.93rem'}}>Wallet:</span>
-            <span title={address}>{shortAddress}</span>
-            <button style={{background:'none',border:'none',color:'#36B04A',cursor:'pointer',fontSize:'1.1em'}} onClick={()=>navigator.clipboard.writeText(address)} title="Copy address">⧉</button>
-          </div>
-        )}
-      </Info>
-    </Box>
+            Connect Wallet
+          </span>
+        </div>
+      )}
+    </div>
   );
 }; 

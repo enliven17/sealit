@@ -15,6 +15,9 @@ import { StellarWalletsKit, WalletNetwork, allowAllModules } from '@creit.tech/s
 import { BLEND_POOL_ADDRESS, BLEND_POOL_CONTRACT_ID } from '@/constants/assets';
 import * as soroban from 'soroban-client';
 import Modal from './SupplyModal';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/index';
+import avatarImg from '@/assets/profile/profile.jpeg';
 
 const Box = styled.div`
   background: #181c24;
@@ -175,6 +178,8 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
   const [placeholder, setPlaceholder] = useState('');
   const typeIndex = useRef(0);
   const [showSupplyModal, setShowSupplyModal] = useState(false);
+  const isWalletConnected = useSelector((state: RootState) => state.wallet.isConnected);
+  const [avatarUrl, setAvatarUrl] = useState<string>(typeof avatarImg === 'string' ? avatarImg : avatarImg.src);
 
   const kit = new StellarWalletsKit({
     network: WalletNetwork.TESTNET,
@@ -241,43 +246,86 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
   };
 
   return (
-    <Box>
-      <Row>
-        <Avatar src="https://randomuser.me/api/portraits/men/32.jpg" alt="avatar" />
-        <Textarea
-          placeholder={placeholder}
-          value={content}
-          onChange={e => setContent(e.target.value)}
-          maxLength={280}
-        />
-      </Row>
-      {imageUrl && <ImgPreview src={imageUrl} alt="preview" />}
-      <Actions>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <AmountRow>
-            <Amount
-              type="number"
-              min={1}
-              value={amount}
-              onChange={e => setAmount(Number(e.target.value))}
-              placeholder="Amount (XLM)"
-              style={{width:80}}
-            />
-            <XlmLabel>XLM</XlmLabel>
-          </AmountRow>
-          <AttachButton onClick={handleAttachClick}>
-            <span role="img" aria-label="attach" style={{marginRight: 6}}>📎</span>Attach
-          </AttachButton>
+    <div style={{position: 'relative'}}>
+      <Box style={!isWalletConnected ? { filter: 'blur(2px)', pointerEvents: 'none' } : {}}>
+        <Row>
+          <Avatar src={avatarUrl} alt="avatar" />
+          <Textarea
+            placeholder={placeholder}
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            maxLength={280}
+          />
+        </Row>
+        {imageUrl && <ImgPreview src={imageUrl} alt="preview" />}
+        <Actions>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <AmountRow>
+              <Amount
+                type="number"
+                min={1}
+                value={amount}
+                onChange={e => setAmount(Number(e.target.value))}
+                placeholder="Amount (XLM)"
+                style={{width:80}}
+              />
+              <XlmLabel>XLM</XlmLabel>
+            </AmountRow>
+            <AttachButton onClick={handleAttachClick}>
+              <span role="img" aria-label="attach" style={{marginRight: 6}}>📎</span>Attach
+            </AttachButton>
+          </div>
+          <LockButton onClick={handleLockClick} disabled={loading || !content || amount <= 0}>
+            {loading ? 'Kontrol ediliyor...' : `Lock with XLM`}
+          </LockButton>
+        </Actions>
+        {showSupplyModal && (
+          <Modal onClose={() => setShowSupplyModal(false)} onContinue={handleCheckSupply} loading={loading} />
+        )}
+        {error && <div style={{color:'#ff5252',marginTop:8}}>{error}</div>}
+      </Box>
+      {!isWalletConnected && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
+          background: 'linear-gradient(120deg, rgba(54,176,74,0.18) 0%, rgba(24,28,36,0.7) 60%, rgba(54,176,74,0.18) 100%)',
+          pointerEvents: 'auto',
+          animation: 'gradientMove 3s ease-in-out infinite',
+          backgroundSize: '200% 200%',
+          borderRadius: 16,
+        }}>
+          <style>{`
+            @keyframes gradientMove {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
+          `}</style>
+          <span style={{
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: 16,
+            textShadow: '0 2px 8px #000',
+            letterSpacing: 0.5,
+            background: 'linear-gradient(90deg, #36B04A, #b3ffb3, #36B04A)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            animation: 'gradientMove 2.5s linear infinite',
+            backgroundSize: '200% 200%',
+          }}>
+            Connect Wallet
+          </span>
         </div>
-        <LockButton onClick={handleLockClick} disabled={loading || !content || amount <= 0}>
-          {loading ? 'Kontrol ediliyor...' : `Lock with XLM`}
-        </LockButton>
-      </Actions>
-      {showSupplyModal && (
-        <Modal onClose={() => setShowSupplyModal(false)} onContinue={handleCheckSupply} loading={loading} />
       )}
-      {error && <div style={{color:'#ff5252',marginTop:8}}>{error}</div>}
-    </Box>
+    </div>
   );
 };
 
@@ -285,29 +333,29 @@ async function verifySupplyTx(txHash: string, userAddress: string, minAmount: nu
   const server = new Server('https://horizon-testnet.stellar.org');
   try {
     const tx = await server.transactions().transaction(txHash).call();
-    if (tx.successful !== true) return false;
-    if (tx.source_account !== userAddress) return false;
-
     const ops = await tx.operations();
     return ops.records.some(op => {
       // Payment ise
-      if (op.type === 'payment' && op.from === userAddress && op.to === poolAddress && Number(op.amount) >= minAmount) {
+      if (
+        (op as any).type === 'payment' &&
+        ((op as any).from === userAddress || (op as any).source_account === userAddress) &&
+        (op as any).to === poolAddress &&
+        Number((op as any).amount) >= minAmount
+      ) {
         return true;
       }
-      // Contract call ise
-      if (op.type === 'invoke_host_function') {
-        const contractId = op.contract || op.contract_id;
-        const functionName = op.function || op.function_name;
-        const params = op.parameters || op.params || [];
-        if (
-          contractId === poolAddress &&
-          functionName === 'submit' &&
-          params.length > 0 &&
-          Number(params[0].amount) >= minAmount * 1e7 &&
-          Number(params[0].request_type) === 2
-        ) {
-          return true;
-        }
+      // Contract call ise asset_balance_changes ile kontrol
+      if (
+        (op as any).type === 'invoke_host_function' &&
+        (op as any).transaction_successful === true &&
+        Array.isArray((op as any).asset_balance_changes)
+      ) {
+        return ((op as any).asset_balance_changes as any[]).some((change: any) =>
+          change.asset_type === 'native' &&
+          change.from === userAddress &&
+          change.to === poolAddress &&
+          Number(change.amount) >= minAmount
+        );
       }
       return false;
     });
