@@ -12,8 +12,9 @@ import {
   xdr
 } from 'stellar-sdk';
 import { StellarWalletsKit, WalletNetwork, allowAllModules } from '@creit.tech/stellar-wallets-kit';
-import { BLEND_POOL_ADDRESS } from '@/constants/assets';
+import { BLEND_POOL_ADDRESS, BLEND_POOL_CONTRACT_ID } from '@/constants/assets';
 import * as soroban from 'soroban-client';
+import Modal from './SupplyModal';
 
 const Box = styled.div`
   background: #181c24;
@@ -173,6 +174,7 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
   const [error, setError] = useState<string | null>(null);
   const [placeholder, setPlaceholder] = useState('');
   const typeIndex = useRef(0);
+  const [showSupplyModal, setShowSupplyModal] = useState(false);
 
   const kit = new StellarWalletsKit({
     network: WalletNetwork.TESTNET,
@@ -211,61 +213,31 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
     if (fileRef.current) fileRef.current.click();
   };
 
-  const handlePost = async () => {
+  const handleLockClick = () => {
+    window.open('https://testnet.blend.capital/', '_blank');
+    setShowSupplyModal(true);
+  };
+
+  const handleCheckSupply = async (txHash: string) => {
     setError(null);
-    if ((content.trim() || imageUrl) && amount > 0) {
-      setLoading(true);
-      try {
-        // Soroban contract call ile Blend Pool'a XLM supply
-        const server = new soroban.Server('https://soroban-testnet.stellar.org');
-        const result = await kit.getAddress();
-        const pubkey = result.address;
-        const account = await server.getAccount(pubkey);
-        const stroopAmount = BigInt(Math.floor(amount * 1e7));
-        
-        // Transaction oluştur
-        let tx = new soroban.TransactionBuilder(account, {
-          fee: '10000',
-          networkPassphrase: soroban.Networks.TESTNET,
-        })
-          .addOperation(soroban.Operation.invokeContractFunction({
-            contract: BLEND_POOL_ADDRESS,
-            function: 'deposit',
-            args: [
-              'native' as any,
-              stroopAmount.toString() as any
-            ],
-          }))
-          .setTimeout(30)
-          .build();
-        
-        // Kullanıcı cüzdanı ile sign et
-        const signed = await kit.signTransaction(tx.toXDR(), {
-          address: pubkey,
-          networkPassphrase: soroban.Networks.TESTNET,
-        });
-        const signedXDR = typeof signed === 'string' ? signed : signed.signedTxXdr;
-        const signedTx = soroban.TransactionBuilder.fromXDR(signedXDR, soroban.Networks.TESTNET);
-        
-        // Submit et
-        const response = await server.sendTransaction(signedTx);
-        console.log('Soroban sendTransaction response:', response);
-        
-        if (response.status === 'success') {
-          onCreate({ content, imageUrl, token: 'XLM', amount });
-          setContent("");
-          setImageUrl("");
-          setAmount(0);
-          setLoading(false);
-        } else {
-          setError('Token supply failed: ' + (response.errorResult || response.status));
-          setLoading(false);
-        }
-      } catch (e: any) {
-        setError('Token supply failed: ' + (e?.message || 'Unknown error'));
-        setLoading(false);
+    setLoading(true);
+    try {
+      const result = await kit.getAddress();
+      const pubkey = result.address;
+      const supplied = await verifySupplyTx(txHash, pubkey, amount, BLEND_POOL_ADDRESS);
+      if (supplied) {
+        onCreate({ content, imageUrl, token: 'XLM', amount });
+        setContent("");
+        setImageUrl("");
+        setAmount(0);
+        setShowSupplyModal(false);
+      } else {
+        setError('Supply işlemi doğrulanamadı. Lütfen transaction hash, miktar ve cüzdanı kontrol edin.');
       }
+    } catch (e: any) {
+      setError('Supply kontrolü başarısız: ' + (e?.message || 'Unknown error'));
     }
+    setLoading(false);
   };
 
   return (
@@ -297,11 +269,49 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
             <span role="img" aria-label="attach" style={{marginRight: 6}}>📎</span>Attach
           </AttachButton>
         </div>
-        <LockButton onClick={handlePost} disabled={loading || !content || amount <= 0}>
-          {loading ? 'Locking...' : `Lock with XLM`}
+        <LockButton onClick={handleLockClick} disabled={loading || !content || amount <= 0}>
+          {loading ? 'Kontrol ediliyor...' : `Lock with XLM`}
         </LockButton>
       </Actions>
+      {showSupplyModal && (
+        <Modal onClose={() => setShowSupplyModal(false)} onContinue={handleCheckSupply} loading={loading} />
+      )}
       {error && <div style={{color:'#ff5252',marginTop:8}}>{error}</div>}
     </Box>
   );
-}; 
+};
+
+async function verifySupplyTx(txHash: string, userAddress: string, minAmount: number, poolAddress: string) {
+  const server = new Server('https://horizon-testnet.stellar.org');
+  try {
+    const tx = await server.transactions().transaction(txHash).call();
+    if (tx.successful !== true) return false;
+    if (tx.source_account !== userAddress) return false;
+
+    const ops = await tx.operations();
+    return ops.records.some(op => {
+      // Payment ise
+      if (op.type === 'payment' && op.from === userAddress && op.to === poolAddress && Number(op.amount) >= minAmount) {
+        return true;
+      }
+      // Contract call ise
+      if (op.type === 'invoke_host_function') {
+        const contractId = op.contract || op.contract_id;
+        const functionName = op.function || op.function_name;
+        const params = op.parameters || op.params || [];
+        if (
+          contractId === poolAddress &&
+          functionName === 'submit' &&
+          params.length > 0 &&
+          Number(params[0].amount) >= minAmount * 1e7 &&
+          Number(params[0].request_type) === 2
+        ) {
+          return true;
+        }
+      }
+      return false;
+    });
+  } catch (e) {
+    return false;
+  }
+} 
