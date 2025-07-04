@@ -5,6 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Stellar](https://img.shields.io/badge/Stellar-SDK-13.3.0-purple)](https://stellar.org/)
 [![Redux Toolkit](https://img.shields.io/badge/Redux%20Toolkit-2.8.2-purple)](https://redux-toolkit.js.org/)
+[![Styled Components](https://img.shields.io/badge/Styled%20Components-6.1.19-pink)](https://styled-components.com/)
 
 ## 📋 Overview
 
@@ -86,13 +87,22 @@ const verifyUnlockAccess = async (userAddress: string, requiredAmount: number) =
 };
 ```
 
-## 🚀 Installation & Setup
+### BLND Pool Integration
+```typescript
+// BLND/XLM Pool Configuration
+export const BLEND_POOL_ADDRESS = 'CCLBPEYS3XFK65MYYXSBMOGKUI4ODN5S7SUZBGD7NALUQF64QILLX5B5';
+export const BLND_XLM_RATIO = 0.3; // 1 XLM = 0.3 BLND
+export const SECURITY_FEE_PERCENTAGE = 0.2; // 20% security fee
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Stellar Testnet account
-- Compatible Stellar wallet (Freighter recommended)
+// Unlock fee calculation
+export const calculateUnlockFee = (xlmAmount: number): number => {
+  const baseFee = xlmAmount * BLND_XLM_RATIO;
+  const securityFee = baseFee * SECURITY_FEE_PERCENTAGE;
+  return Math.round((baseFee + securityFee) * 100) / 100;
+};
+```
+
+## 🚀 Installation & Setup
 
 ### Quick Start
 ```bash
@@ -263,4 +273,4 @@ This project is licensed under the MIT License.
 
 ---
 
-**Built with ❤️
+**Built with ❤️ for the future of SocialFi on Stellar**
