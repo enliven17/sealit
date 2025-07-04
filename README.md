@@ -107,7 +107,7 @@ export const calculateUnlockFee = (xlmAmount: number): number => {
 ### Quick Start
 ```bash
 # Clone and install
-git clone https://github.com/your-username/sealit.git
+git clone https://github.com/enliven17/sealit.git
 cd sealit
 npm install
 
