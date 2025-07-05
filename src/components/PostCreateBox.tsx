@@ -384,7 +384,8 @@ async function verifySupplyTx(txHash: string, userAddress: string, minAmount: nu
         (op as any).type === 'payment' &&
         ((op as any).from === userAddress || (op as any).source_account === userAddress) &&
         (op as any).to === poolAddress &&
-        Number((op as any).amount) >= minAmount
+        (op as any).asset_type === 'native' &&
+        Number((op as any).amount) === minAmount
       ) {
         return true;
       }
@@ -398,7 +399,7 @@ async function verifySupplyTx(txHash: string, userAddress: string, minAmount: nu
           change.asset_type === 'native' &&
           change.from === userAddress &&
           change.to === poolAddress &&
-          Number(change.amount) >= minAmount
+          Number(change.amount) === minAmount
         );
       }
       return false;
