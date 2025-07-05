@@ -132,7 +132,7 @@ export const WalletConnectButton: React.FC = () => {
       ) : (
         <WalletInfo>
           Connected: <strong>{walletName}</strong>
-          <WalletLabel title={address}>{address ? `${address.slice(0,6)}...${address.slice(-4)}` : ''}</WalletLabel>
+          <WalletLabel title={address || undefined}>{address ? `${address.slice(0,6)}...${address.slice(-4)}` : ''}</WalletLabel>
           <Disconnect onClick={handleDisconnect} title="Disconnect">⎋</Disconnect>
         </WalletInfo>
       )}
