@@ -232,7 +232,7 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
       const pubkey = result.address;
       const supplied = await verifySupplyTx(txHash, pubkey, amount, BLEND_POOL_ADDRESS);
       if (supplied) {
-        onCreate({
+        const newPost = {
           content,
           imageUrl,
           token: 'XLM',
@@ -242,7 +242,9 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
             avatar: avatar,
             time: 'now',
           },
-        });
+        };
+        console.log('Yeni post:', newPost);
+        onCreate(newPost);
         setContent("");
         setImageUrl("");
         setAmount(0);
