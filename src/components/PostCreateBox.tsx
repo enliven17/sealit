@@ -180,6 +180,7 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
   const [showSupplyModal, setShowSupplyModal] = useState(false);
   const isWalletConnected = useSelector((state: RootState) => state.wallet.isConnected);
   const [avatarUrl, setAvatarUrl] = useState<string>(typeof avatarImg === 'string' ? avatarImg : avatarImg.src);
+  const { username, avatar } = useSelector((state: RootState) => state.wallet);
 
   const kit = new StellarWalletsKit({
     network: WalletNetwork.TESTNET,
@@ -237,8 +238,8 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
           token: 'XLM',
           amount,
           user: {
-            name: 'enliven',
-            avatar: avatarUrl,
+            name: username,
+            avatar: avatar,
             time: 'now',
           },
         });
