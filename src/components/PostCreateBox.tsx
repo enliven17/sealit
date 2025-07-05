@@ -238,8 +238,8 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
           token: 'XLM',
           amount,
           user: {
-            name: username,
-            avatar: avatar,
+            name: 'enliven',
+            avatar: typeof avatarImg === 'string' ? avatarImg : avatarImg.src,
             time: 'now',
           },
         };
