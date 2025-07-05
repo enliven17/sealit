@@ -187,6 +187,25 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
     modules: allowAllModules(),
   });
 
+  // Kullanılmış hash'leri localStorage'da tut
+  const USED_HASHES_KEY = 'usedTxHashes';
+  const getUsedHashes = () => {
+    try {
+      return JSON.parse(localStorage.getItem(USED_HASHES_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  };
+  const addUsedHash = (hash: string) => {
+    const hashes = getUsedHashes();
+    hashes.push(hash);
+    localStorage.setItem(USED_HASHES_KEY, JSON.stringify(hashes));
+  };
+  const isHashUsed = (hash: string) => {
+    const hashes = getUsedHashes();
+    return hashes.includes(hash);
+  };
+
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     const type = () => {
@@ -227,11 +246,17 @@ export const PostCreateBox: React.FC<Props> = ({ onCreate }) => {
   const handleCheckSupply = async (txHash: string) => {
     setError(null);
     setLoading(true);
+    if (isHashUsed(txHash)) {
+      setError('This transaction hash has already been used. Please use a new supply transaction.');
+      setLoading(false);
+      return;
+    }
     try {
       const result = await kit.getAddress();
       const pubkey = result.address;
       const supplied = await verifySupplyTx(txHash, pubkey, amount, BLEND_POOL_ADDRESS);
       if (supplied) {
+        addUsedHash(txHash);
         const newPost = {
           content,
           imageUrl,
