@@ -20,11 +20,7 @@ export default function Home() {
       ...post,
       id: Date.now(),
       locked: true,
-      user: {
-        name: "Benjamin Thompson",
-        avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-        time: "now"
-      }
+      user: post.user
     }));
   };
   const handleUnlock = (id: number) => {
